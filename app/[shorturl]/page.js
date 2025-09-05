@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import clientPromise from "@/lib/mongodb";
 
 export default async function Page({ params }) {
-  const shorturl = params.shorturl; // ✅ No need to `await` `params`, it's already a plain object
+  const shorturl = params.shorturl; 
 
   const client = await clientPromise;
   const db = client.db("Bitlinks");
@@ -11,13 +11,18 @@ export default async function Page({ params }) {
   const doc = await collection.findOne({ shorturl: shorturl });
 
   if (doc && doc.url) {
-    redirect(doc.url); // ✅ Redirect to original URL
+    const now = new Date();
+    if (doc.expiresAt && now > doc.expiresAt) {
+      
+      return <div className="text-center mt-16 text-red-600 font-bold text-xl">This link has expired.</div>;
+    }
+    
+    await collection.updateOne({ shorturl }, { $inc: { clicks: 1 } });
+    redirect(doc.url);
   } else {
-    // ✅ Use environment variable or fallback
     redirect(process.env.NEXT_PUBLIC_HOST || "/");
   }
 
-  // ✅ This return is unreachable because redirect() ends the rendering
-  // But if you want to render something for debugging, remove redirect
+ 
   return <div>Redirecting...</div>;
 }

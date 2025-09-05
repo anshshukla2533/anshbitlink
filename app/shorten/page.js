@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
+import { QRCodeSVG } from 'qrcode.react';
 import Link from 'next/link'
 
 const Shorten = () => {
@@ -71,6 +72,11 @@ const Shorten = () => {
             <Link href={generatedLink} target="_blank" className="text-blue-600 underline">
               {generatedLink}
             </Link>
+              <div className="mt-4 flex flex-col items-center">
+                <span className="font-semibold">Barcode (QR):</span>
+                <QRCodeSVG value={generatedLink} size={128} />
+                <span className="text-xs text-gray-500 mt-2">Expires in 1 minute</span>
+              </div>
           </div>
         )}
       </div>

@@ -1,14 +1,41 @@
 import clientPromise from "@/lib/mongodb";
 
+
+const rateLimitStore = {};
+
 export async function POST(request) {
   try {
-    const body = await request.json(); // Parse request body
+  
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+      "unknown";
+
+    const now = Date.now();
+    const lastRequestTime = rateLimitStore[ip];
+
+    
+    if (lastRequestTime && now - lastRequestTime < 60 * 1000) {
+      return Response.json(
+        {
+          success: false,
+          error: true,
+          message: "Rate limit exceeded. Please wait 1 minute.",
+        },
+        { status: 429 }
+      );
+    }
+
+    
+    rateLimitStore[ip] = now;
+
+    const body = await request.json();
+
 
     const client = await clientPromise;
     const db = client.db("Bitlinks");
     const collection = db.collection("url");
 
-    // ✅ Check if shorturl already exists
+   
     const doc = await collection.findOne({ shorturl: body.shorturl });
     if (doc) {
       return Response.json({
@@ -18,10 +45,11 @@ export async function POST(request) {
       });
     }
 
-    // ✅ Insert only if not present
     await collection.insertOne({
       url: body.url,
       shorturl: body.shorturl,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 60 * 1000), 
     });
 
     return Response.json({
